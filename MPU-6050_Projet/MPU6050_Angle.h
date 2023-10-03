@@ -13,6 +13,8 @@ public:
 
 private:
   static const int NumData = 7;
+  static const int MPU = 0x68; // Define MPU constant
+  static const double pi;      // Define pi constant
   int GyAccTemp[NumData];
   int GATCorr[NumData] = {0, 0, 0, 0, 0, 0, 0};
   double PitchRoll[3];
@@ -21,4 +23,5 @@ private:
   void ComputeAngle(int *GyAccTempp, double *PitchRol);
 };
 
+#endif
 #endif

@@ -1,5 +1,7 @@
 #include "MPU6050_Angle.h"
 
+const double MPU6050_Angle::pi = 3.1415926535897932384626433832795;
+
 MPU6050_Angle::MPU6050_Angle() {
   // Constructor
 }

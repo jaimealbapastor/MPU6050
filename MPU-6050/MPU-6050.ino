@@ -4,18 +4,6 @@
 #define pi      3.1415926535897932384626433832795  
 #define MPU     0x68
 
-// Pinout 
-/*
-  VCC -> 3.3 V / 5 V (péférable)
-  GND -> GND
-  SCL -> A5
-  SDA -> A4
-  
-  XDA -> NC (non connecté)
-  XCL -> NC 
-  ADO -> NC
-  INT -> NC
- */
  
 int  GyAccTemp[NumData];
 int  GATCorr[NumData]={0,0,0,0,0,0,0};
@@ -37,6 +25,8 @@ void setup()
 }
 void loop()
 {
+  delay(100);
+
   // Lecture du capteur 
   ReadGY521( GyAccTemp, GATCorr);
   
@@ -44,20 +34,20 @@ void loop()
   ComputeAngle(GyAccTemp, PitchRoll);
 
   // Affichage dans le port série Roll/Pitch/ Yaw en °
-  /*Serial.print(PitchRoll[0]); Serial.print(",");
+  Serial.print(PitchRoll[0]); Serial.print(",");
   Serial.print(PitchRoll[1]); Serial.print(",");
   Serial.println(PitchRoll[2]); //Serial.print(";");
-  delay(100);*/
+  delay(100);
 
   // Affichage des 3 Axes de l'Accéléromètre 
-  Serial.print(GyAccTemp[0]); Serial.print(",");
+  /*Serial.print(GyAccTemp[0]); Serial.print(",");
   Serial.print(GyAccTemp[1]); Serial.print(",");
-  Serial.println(GyAccTemp[2]); 
+  Serial.println(GyAccTemp[2]); */
   
   // Affichage 3 Axes du Gyroscope
   /*Serial.print(GyAccTemp[4]); Serial.print(",");
   Serial.print(GyAccTemp[5]); Serial.print(",");
-  Serial.println(GyAccTemp[6]);*/ 
+  Serial.println(GyAccTemp[6]);*/
 }
 
 

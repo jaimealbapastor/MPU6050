@@ -1,4 +1,4 @@
-#include<Wire.h>
+#include <Wire.h>
 #include <math.h>
 #define NumData 7
 #define pi      3.1415926535897932384626433832795  

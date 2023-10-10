@@ -9,5 +9,5 @@ void setup() {
 }
 
 void loop() {
-  angleSensor.readAngle();
+  angleSensor.readRowGyro();
 }

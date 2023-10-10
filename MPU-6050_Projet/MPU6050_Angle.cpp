@@ -34,6 +34,32 @@ void MPU6050_Angle::readAngle() {
   delay(100);
 }
 
+void MPU6050_Angle::readRowGyro() {
+  delay(100);
+
+  // Read sensor data
+  ReadGY521(GyAccTemp, GATCorr);
+
+  // Display Row output of gyroscope
+  Serial.print(GyAccTemp[4]); Serial.print(",");
+  Serial.print(GyAccTemp[5]); Serial.print(",");
+  Serial.println(GyAccTemp[6]);
+  delay(100);
+}
+
+void MPU6050_Angle::readRowAcc() {
+  delay(100);
+
+  // Read sensor data
+  ReadGY521(GyAccTemp, GATCorr);
+
+  // Display Row outputs of accelermoter
+  Serial.print(GyAccTemp[0]); Serial.print(",");
+  Serial.print(GyAccTemp[1]); Serial.print(",");
+  Serial.println(GyAccTemp[2]);
+  delay(100);
+}
+
 void MPU6050_Angle::ReadGY521(int *GyAccTempp, int *GATCorrr) {
   // Sensor initialization
   Wire.beginTransmission(MPU);
@@ -47,7 +73,7 @@ void MPU6050_Angle::ReadGY521(int *GyAccTempp, int *GATCorrr) {
       GyAccTempp[i] = (Wire.read() << 8 | Wire.read()) + GATCorrr[i];
     } else {
       GyAccTempp[i] = (Wire.read() << 8 | Wire.read()) + GATCorrr[i];
-      GyAccTempp[i] = GyAccTempp[i] / 340 + 36.53;
+      GyAccTempp[i] = GyAccTempp[i] / 340 + 36.53;        // We measure the temperature here and compute it to be in celsius 
     }
   }
 }

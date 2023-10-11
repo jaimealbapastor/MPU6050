@@ -8,7 +8,8 @@ from terminal_widget import TerminalWidget
 class MainWindow(QMainWindow):
     def __init__(self, plot_widget):
         QMainWindow.__init__(self)
-        self.setWindowTitle("Accelerometer information")
+        self.setWindowTitle("Accelerometer viewer")
+        self.setWindowIcon(QIcon("data/accelerometer-sensor.png"))
 
         # Create a stacked widget as the central widget
         self.central_stack = QStackedWidget()
@@ -32,6 +33,10 @@ class MainWindow(QMainWindow):
         show_plot_action.triggered.connect(self.show_plot_widget)
         self.view_menu.addAction(show_plot_action)
 
+        show_plot_action = QAction("Plot csv", self)
+        show_plot_action.triggered.connect(self.show_plot_widget)
+        self.view_menu.addAction(show_plot_action)
+
         # Terminal view
         show_terminal_action = QAction("Terminal", self)
         show_terminal_action.triggered.connect(self.show_terminal_widget)
@@ -45,7 +50,16 @@ class MainWindow(QMainWindow):
         self.settings_menu.addMenu(self.port_menu)
         self.port_menu.aboutToShow.connect(self.show_ports)
 
-        self.ports_in_menu = []
+        # Commands menu
+        self.command_menu = QMenu("Commands", self)
+        self.settings_menu.addMenu(self.command_menu)
+
+        # Commands
+        for command in self.port_widget.getCommands():
+            command_action = QAction(command, self)
+            command_action.setCheckable(True)
+            command_action.triggered.connect(self.set_command)
+            self.command_menu.addAction(command_action)
 
         # Exit QAction
         exit_action = QAction("Exit", self)
@@ -77,8 +91,7 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def show_ports(self):
-        for port_action in self.ports_in_menu:
-            self.ports_in_menu.remove(port_action)
+        for port_action in self.port_menu.actions():
             port_action.deleteLater()
 
         ports = self.port_widget.serial_ports()
@@ -87,12 +100,11 @@ class MainWindow(QMainWindow):
             port_action = QAction("No ports found...", self)
             port_action.setDisabled(True)
             self.port_menu.addAction(port_action)
-            self.ports_in_menu.append(port_action)
             return
 
         for port_name in ports:
             port_action = QAction(port_name, self)
-            port_action.triggered.connect(lambda: self.select_port(port_action))
+            port_action.triggered.connect(self.select_port)
             port_action.setCheckable(True)
 
             if port_name == self.port_widget.selected_port:
@@ -101,10 +113,10 @@ class MainWindow(QMainWindow):
             self.status.showMessage(f"Connected to {port_name}")
 
             self.port_menu.addAction(port_action)
-            self.ports_in_menu.append(port_action)
 
     @Slot()
-    def select_port(self, port_action: QAction):
+    def select_port(self):
+        port_action = self.sender()
         if port_action.isChecked():
             port_name = port_action.text()
             self.port_widget.connect_port(port_name)
@@ -112,3 +124,11 @@ class MainWindow(QMainWindow):
         else:
             self.port_widget.disconnect_port()
             port_action.setChecked(False)
+
+    @Slot()
+    def set_command(self):
+        command_action = self.sender()
+        for action in self.command_menu.actions():
+            action.setChecked(False)
+        command_action.setChecked(True)
+        self.port_widget.send_command(command_action.text())

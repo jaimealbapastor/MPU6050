@@ -25,6 +25,7 @@ private:
 
   void ReadGY521(int *GyAccTempp, int *GATCorrr);
   void ComputeAngle(int *GyAccTempp, double *PitchRol);
+  void endSerial();
 };
 
 #endif

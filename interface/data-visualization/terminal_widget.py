@@ -67,6 +67,7 @@ class TerminalWidget(QWidget):
     def clear_output(self):
         self.output_text.clear()
 
+    @Slot()
     def print_(self, line: str):
         self.output_text.append(line)
 
@@ -84,10 +85,5 @@ class TerminalWidget(QWidget):
             # Clear the input line
             self.input_line.clear()
 
-            time.sleep(0.1)
-
-            # Read and display the response
-            response = self.port_widget.read()
-            self.print_(response)
         except Exception as e:
             self.print_(f"Error: {str(e)}")

@@ -1,5 +1,6 @@
 import serial
 import serial.tools.list_ports
+import time
 
 from PySide6.QtCore import Slot, QObject, Signal, QThread
 from PySide6.QtWidgets import QWidget
@@ -33,7 +34,6 @@ class PortWidget(QWidget):
     @Slot()
     def disconnect_port(self):
         self.selected_port = None
-        msg = None
         if self.serial_port:
             try:
                 self.stop_worker()
@@ -64,7 +64,6 @@ class PortWidget(QWidget):
         for command, value in self.commands:
             if command_to_send == command:
                 c = f"{self.command_symbol}{value}"
-                print(c)
                 self.write(f"{self.command_symbol}{value}")
 
     def read_serial_data(self):

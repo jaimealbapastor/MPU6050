@@ -3,10 +3,12 @@ from PySide6.QtGui import QAction, QKeySequence, QIcon
 from PySide6.QtWidgets import QMainWindow, QStackedWidget, QMenu
 from port_widget import PortWidget
 from terminal_widget import TerminalWidget
+from plot_widget import PlotWidget
+from csv_loader import CSVFileLoader
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, plot_widget):
+    def __init__(self):
         QMainWindow.__init__(self)
         self.setWindowTitle("Accelerometer viewer")
         self.setWindowIcon(QIcon("data/accelerometer-sensor.png"))
@@ -16,24 +18,39 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.central_stack)
 
         # Widgets
-        self.plot_widget = plot_widget
         self.port_widget = PortWidget()
+
+        self.serial_plot_widget = PlotWidget(port_widget=self.port_widget)
+        self.csv_plot_widget = None
+
         self.terminal_widget = TerminalWidget(self.port_widget)
-        self.central_stack.addWidget(self.plot_widget)
+        self.central_stack.addWidget(self.serial_plot_widget)
         self.central_stack.addWidget(self.terminal_widget)
 
         # Menu
         self.menu = self.menuBar()
-        self.view_menu = self.menu.addMenu("View")
+
+        # File menu
+        self.file_menu = self.menu.addMenu("File")
+
+        open_serial_plot_action = QAction("Open Serial Plot", self)
+        open_serial_plot_action.triggered.connect(self.open_serial_plot)
+        self.file_menu.addAction(open_serial_plot_action)
+
+        open_new_csv_action = QAction("Open new CSV", self)
+        open_new_csv_action.triggered.connect(lambda: self.open_csv_plot(True))
+        self.file_menu.addAction(open_new_csv_action)
+
+        self.open_csv_action = QAction("Open CSV", self)
+        self.open_csv_action.triggered.connect(self.open_csv_plot)
+        self.open_csv_action.setDisabled(True)
+        self.file_menu.addAction(self.open_csv_action)
 
         # View menu
+        self.view_menu = self.menu.addMenu("View")
 
         # Plot view
         show_plot_action = QAction("Plot", self)
-        show_plot_action.triggered.connect(self.show_plot_widget)
-        self.view_menu.addAction(show_plot_action)
-
-        show_plot_action = QAction("Plot csv", self)
         show_plot_action.triggered.connect(self.show_plot_widget)
         self.view_menu.addAction(show_plot_action)
 
@@ -43,16 +60,16 @@ class MainWindow(QMainWindow):
         self.view_menu.addAction(show_terminal_action)
 
         # Settings menu
-        self.settings_menu = self.menu.addMenu("Settings")
+        self.serial_menu = self.menu.addMenu("Serial")
 
         # Select port
         self.port_menu = QMenu("Select Port", self)
-        self.settings_menu.addMenu(self.port_menu)
+        self.serial_menu.addMenu(self.port_menu)
         self.port_menu.aboutToShow.connect(self.show_ports)
 
         # Commands menu
         self.command_menu = QMenu("Commands", self)
-        self.settings_menu.addMenu(self.command_menu)
+        self.serial_menu.addMenu(self.command_menu)
 
         # Commands
         for command in self.port_widget.getCommands():
@@ -65,7 +82,7 @@ class MainWindow(QMainWindow):
         exit_action = QAction("Exit", self)
         exit_action.setShortcut(QKeySequence.Quit)
         exit_action.triggered.connect(self.close)
-        self.settings_menu.addAction(exit_action)
+        self.serial_menu.addAction(exit_action)
 
         # Status Bar
         self.status = self.statusBar()
@@ -75,18 +92,43 @@ class MainWindow(QMainWindow):
         geometry = self.screen().availableGeometry()
         self.setFixedSize(geometry.width() * 0.8, geometry.height() * 0.7)
 
+    def hide_all(self):
+        for i in range(self.central_stack.count()):
+            self.central_stack.widget(i).hide()
+
+    @Slot()
+    def open_serial_plot(self):
+        self.central_stack.setCurrentWidget(self.serial_plot_widget)
+
+    @Slot()
+    def open_csv_plot(self, open_new=False):
+        if open_new:
+            data = CSVFileLoader.load_csv_data()
+            self.csv_plot_widget = plot_widget = PlotWidget(data=data)
+            self.open_csv_action.setEnabled(True)
+
+            self.central_stack.addWidget(plot_widget)
+            self.central_stack.setCurrentWidget(plot_widget)
+            return
+
+        if self.csv_plot_widget:
+            self.central_stack.setCurrentWidget(self.csv_plot_widget)
+            # self.hide_all()
+            # plot_widget.show()
+
     @Slot()
     def show_plot_widget(self):
-        self.central_stack.setCurrentIndex(0)  # Show the main widget
-        self.plot_widget.show()
-        self.terminal_widget.hide()
+        self.central_stack.setCurrentWidget(self.serial_plot_widget)
+
+        # self.hide_all()
+        # self.plot_widget.show()
 
     @Slot()
     def show_terminal_widget(self):
         self.central_stack.setCurrentIndex(
             self.central_stack.indexOf(self.terminal_widget)
         )
-        self.plot_widget.hide()
+        self.hide_all()
         self.terminal_widget.show()
 
     @Slot()

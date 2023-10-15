@@ -1,107 +1,114 @@
 #include "MPU6050_Angle.h"
 
-const double MPU6050_Angle::pi = 3.1415926535897932384626433832795;
-
 MPU6050_Angle::MPU6050_Angle() {}
 
-MPU6050_Angle::~MPU6050_Angle() {
-  this->endSerial();
+MPU6050_Angle::~MPU6050_Angle()
+{
+  Wire.endTransmission(true);
 }
 
-void MPU6050_Angle::begin(int baud_rate = 9600) {
+void MPU6050_Angle::begin()
+{
   // Init module GY-512
   Wire.begin();
   Wire.beginTransmission(MPU_address);
   Wire.write(0x6B);
   Wire.write(0);
   Wire.endTransmission(true);
-
-  // Init serial port
-  Serial.begin(baud_rate);
 }
 
-void MPU6050_Angle::readAngle() {
-  delay(100);
-
-  // Read sensor data
-  ReadGY521(GyAccTemp, GATCorr);
-
-  // Compute pitch, roll, and yaw angles
-  ComputeAngle(GyAccTemp, PitchRoll);
-
-  // Display roll, pitch, and yaw angles in degrees
-  Serial.print(PitchRoll[0]);
-  Serial.print(",");
-  Serial.print(PitchRoll[1]);
-  Serial.print(",");
-  Serial.println(PitchRoll[2]);
-  delay(100);
+bool MPU6050_Angle::isReady()
+{
+  return millis() - this->lastReadingTime > this->restTime;
 }
 
-void MPU6050_Angle::readRowGyro() {
-  delay(100);
+bool MPU6050_Angle::readGY521()
+{
 
-  // Read sensor data
-  ReadGY521(GyAccTemp, GATCorr);
+  if (!this->isReady())
+    return false;
 
-  // Display Row output of gyroscope
-  Serial.print(GyAccTemp[4]);
-  Serial.print(",");
-  Serial.print(GyAccTemp[5]);
-  Serial.print(",");
-  Serial.println(GyAccTemp[6]);
-  delay(100);
-}
-
-void MPU6050_Angle::readRowAcc() {
-  delay(100);
-
-  // Read sensor data
-  ReadGY521(GyAccTemp, GATCorr);
-
-  // Display Row outputs of accelermoter
-  Serial.print(GyAccTemp[0]);
-  Serial.print(",");
-  Serial.print(GyAccTemp[1]);
-  Serial.print(",");
-  Serial.println(GyAccTemp[2]);
-  delay(100);
-}
-
-void MPU6050_Angle::ReadGY521(int *GyAccTempp, int *GATCorrr) {
   // Sensor initialization
-  Wire.beginTransmission(MPU_address);
+  Wire.beginTransmission(this->MPU_address);
   Wire.write(0x3B);
   Wire.endTransmission(false);
-  Wire.requestFrom(MPU_address, 14, true);
+  Wire.requestFrom(this->MPU_address, 14, true);
 
   // Read data (3 accelerometer axes + temperature + 3 gyroscope axes)
-  for (int i = 0; i < NumData; i++) {
-    if (i != 3) {
-      GyAccTempp[i] = (Wire.read() << 8 | Wire.read()) + GATCorrr[i];
-    } else {
-      GyAccTempp[i] = (Wire.read() << 8 | Wire.read()) + GATCorrr[i];
-      GyAccTempp[i] = GyAccTempp[i] / 340 + 36.53;  // We measure the temperature here and compute it to be in celsius
+  for (int i = 0; i < NumData; i++)
+  {
+    if (i != 3)
+    {
+      this->AccTempGyr[i] = (Wire.read() << 8 | Wire.read()) + this->AccTempGyr_correction[i];
+    }
+    else
+    {
+      this->AccTempGyr[i] = (Wire.read() << 8 | Wire.read()) + this->AccTempGyr_correction[i];
+      this->AccTempGyr[i] = this->AccTempGyr[i] / 340 + 36.53; // We measure the temperature here and compute it to be in celsius
     }
   }
+  return true;
 }
 
-void MPU6050_Angle::ComputeAngle(int *GyAccTempp, double *PitchRol) {
-  double x = GyAccTempp[0];
-  double y = GyAccTempp[1];
-  double z = GyAccTempp[2];
+void MPU6050_Angle::computeAngles()
+{
+  double ax = this->AccTempGyr[0];
+  double ay = this->AccTempGyr[1];
+  double az = this->AccTempGyr[2];
 
-  PitchRol[0] = atan(x / sqrt((y * y) + (z * z)));  // pitch
-  PitchRol[1] = atan(y / sqrt((x * x) + (z * z)));  // roll
-  PitchRol[2] = atan(z / sqrt((x * x) + (y * y)));  // pitch
+  double g = this->compute_g(ax, ay, az);
+
+  this->pitch = asin(ax / g); // pitch
+  this->roll = atan(ay / az); // roll
 
   // Convert radians to degrees
-  PitchRol[0] = PitchRol[0] * (180.0 / pi);
-  PitchRol[1] = PitchRol[1] * (180.0 / pi);
-  PitchRol[2] = PitchRol[2] * (180.0 / pi);
+  this->pitch = this->pitch * (180.0 / this->pi);
+  this->roll = this->roll * (180.0 / this->pi);
 }
 
-void MPU6050_Angle::endSerial() {
-  if (Serial)
-    Serial.end();
+bool MPU6050_Angle::updateAngles()
+{
+  // Read sensor data
+  if (this->readGY521())
+  {
+    this->computeAngles();
+    return true;
+  }
+
+  return false;
+}
+
+double MPU6050_Angle::compute_g(double ax, double ay, double az)
+{
+  return sqrt(square(ax) + square(ay) + square(az));
+}
+
+double MPU6050_Angle::getPitch()
+{
+  this->updateAngles();
+  return this->pitch;
+}
+
+double MPU6050_Angle::getRoll()
+{
+  this->updateAngles();
+  return this->roll;
+}
+
+int *MPU6050_Angle::getAccData()
+{
+  this->readGY521();
+  this->accData[0] = this->AccTempGyr[0];
+  this->accData[1] = this->AccTempGyr[1];
+  this->accData[2] = this->AccTempGyr[2];
+  return this->accData;
+}
+
+int *MPU6050_Angle::getGyroData()
+{
+  this->readGY521();
+  this->gyroData[0] = this->AccTempGyr[4];
+  this->gyroData[1] = this->AccTempGyr[5];
+  this->gyroData[2] = this->AccTempGyr[6];
+  return this->gyroData;
 }

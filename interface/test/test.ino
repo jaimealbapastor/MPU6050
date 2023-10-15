@@ -1,4 +1,4 @@
-#include "MPU6050_Angle.h"
+#include "MPU_Serial.h"
 
 // Commands
 
@@ -14,7 +14,7 @@ const int bufferSize = 32; // Define a buffer size for incoming data
 char inputBuffer[bufferSize];  // Input buffer for reading data
 char outputBuffer[bufferSize]; // Output buffer for storing the command
 
-MPU6050_Angle angleSensor;
+MPU_Serial mpuSerial;
 
 int checkCommand(char *inputBuffer)
 {
@@ -33,10 +33,10 @@ void doCommand(int command)
   case COMMAND_STOP:
     break;
   case COMMAND_READ_ANGLE:
-    angleSensor.readAngle();
+    mpuSerial.printAngles();
     break;
   case COMMAND_END_SERIAL:
-    angleSensor.endSerial();
+    mpuSerial.end();
     break;
   default:
     break;
@@ -45,7 +45,11 @@ void doCommand(int command)
 
 void setup()
 {
-  angleSensor.begin(9600);
+  Serial.begin(9600);
+  mpuSerial.begin(9600);
+  while (!Serial)
+  {
+  }
 }
 
 void loop()
@@ -63,4 +67,5 @@ void loop()
     memset(inputBuffer, 0, sizeof(inputBuffer));
   }
   doCommand(current_command);
+  delay(100);
 }

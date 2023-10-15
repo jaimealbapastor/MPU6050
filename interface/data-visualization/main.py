@@ -7,7 +7,6 @@ import pandas as pd
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QDateTime, QTimeZone
 from main_window import MainWindow
-from plot_widget import PlotWidget
 
 
 def read_data(fname):
@@ -24,8 +23,7 @@ if __name__ == "__main__":
     data = read_data(args.file)
 
     app = QApplication(sys.argv)
-    plot_widget = PlotWidget(data)
-    window = MainWindow(plot_widget)
+    window = MainWindow()
 
     window.show()
     sys.exit(app.exec())

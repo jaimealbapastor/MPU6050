@@ -95,10 +95,7 @@ private:
   int read_acc_gyro_vals(uint8_t *accel_t_gyro_ptr);
 
   const unsigned long rest_time = 20; // msec
-  inline unsigned long get_rest_time()
-  {
-    return this->rest_time;
-  }
+  inline unsigned long get_rest_time() { return this->rest_time; }
 
   //  Used the following variables to remove the gyro offset
   euler_angles gyro_offset;

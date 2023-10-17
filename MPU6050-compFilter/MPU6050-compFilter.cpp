@@ -110,10 +110,9 @@ void MPU6050_compFilter::compute_angle_estimations()
 
   // Gyrometer Data
   // Convert gyro values to degrees/sec
-  float FS_SEL = 131;
-  double gyro_x = (acc_t_gyro.value.x_gyro - this->gyro_offset.roll) / FS_SEL;
-  double gyro_y = (acc_t_gyro.value.y_gyro - this->gyro_offset.pitch) / FS_SEL;
-  double gyro_z = (acc_t_gyro.value.z_gyro - this->gyro_offset.yaw) / FS_SEL;
+  double gyro_x = (acc_t_gyro.value.x_gyro - this->gyro_offset.roll);
+  double gyro_y = (acc_t_gyro.value.y_gyro - this->gyro_offset.pitch);
+  double gyro_z = (acc_t_gyro.value.z_gyro - this->gyro_offset.yaw);
 
   // Serial.print(F("Offset x: "));
   // Serial.print(this->gyro_offset.roll);
@@ -124,17 +123,17 @@ void MPU6050_compFilter::compute_angle_estimations()
 
   // Compute the (filtered) gyro angles
   double dt = (t_now - this->get_last_read_time()) / 1000.0;
-  double gyro_angle_x = gyro_x *dt+ this->get_last_roll();
-  double gyro_angle_y = gyro_y *dt+ this->get_last_pitch();
-  double gyro_angle_z = gyro_z *dt+ this->get_last_yaw();
+  double gyro_angle_x = gyro_x * dt + this->get_last_roll();
+  double gyro_angle_y = gyro_y * dt + this->get_last_pitch();
+  double gyro_angle_z = gyro_z * dt + this->get_last_yaw();
 
   // Apply the complementary filter to figure out the change in angle - choice of alpha is
   // estimated now.  Alpha depends on the sampling rate...
-  double alpha = 0; 
+  double alpha = 0.6;
 
   double angle_x = alpha * gyro_angle_x + (1.0 - alpha) * acc_angles.roll;
   double angle_y = alpha * gyro_angle_y + (1.0 - alpha) * acc_angles.pitch;
-  double angle_z = (1.0 - alpha )*gyro_angle_z; // Accelerometer doesn't give z-angle
+  double angle_z = (1 + alpha) * gyro_angle_z; // Accelerometer doesn't give z-angle
 
   this->set_last_angles(angle_x, angle_y, angle_z);
 }

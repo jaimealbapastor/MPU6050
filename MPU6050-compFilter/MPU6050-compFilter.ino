@@ -44,7 +44,6 @@ void loop()
   MPU.compute_angle_estimations();
   MPU.get_euler_angles(&angles);
 
-  Serial.print(F("A;"));
   Serial.print(angles.roll, DEC);
   Serial.print(F(";"));
   Serial.print(angles.pitch, DEC);

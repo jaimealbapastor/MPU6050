@@ -71,7 +71,6 @@ typedef union acc_t_gyro_union
 
 typedef struct euler_angles
 {
-  unsigned long read_time;
   double roll;
   double pitch;
   double yaw;
@@ -82,10 +81,13 @@ class MPU6050_compFilter
 private:
   // Use the following global variables and access functions to help store the overall
   // rotation angle of the sensor
-  euler_angles last_angles;
-  void set_last_angles(unsigned long time, double roll_x, double pitch_y, double yaw_z);
+  unsigned long last_read_time = 0;
+  inline void set_last_read_time(unsigned long t) { this->last_read_time = t; }
+  inline unsigned long get_last_read_time() { return this->last_read_time; }
 
-  inline unsigned long get_last_read_time() { return this->last_angles.read_time; }
+  euler_angles last_angles;
+  void set_last_angles(double roll_x, double pitch_y, double yaw_z);
+
   inline double get_last_roll() { return this->last_angles.roll; }
   inline double get_last_pitch() { return this->last_angles.pitch; }
   inline double get_last_yaw() { return this->last_angles.yaw; }
@@ -93,15 +95,20 @@ private:
   int read_acc_gyro_vals(uint8_t *accel_t_gyro_ptr);
 
   const unsigned long rest_time = 20; // msec
-  inline unsigned long get_rest_time() { return this->rest_time; }
+  inline unsigned long get_rest_time()
+  {
+    return this->rest_time;
+  }
 
   //  Used the following variables to remove the gyro offset
   euler_angles gyro_offset;
-  void calibrate_gyro_offset();
 
   // Robot angle calculations--------------------------------------------
+  double g_;
+  inline void set_g(acc_t_gyro_union *data);
+  inline double g() { return this->g_; }
 
-  void compute_acc_angles(euler_angles *angles, (uint8_t *)acc_t_gyro_data);
+  void compute_acc_angles(euler_angles *angles, acc_t_gyro_union *acc_t_gyro_data);
 
   // Micro-controller communication -------------------------------------
 
@@ -115,7 +122,10 @@ public:
   ~MPU6050_compFilter(){};
 
   void begin();
+  void calibrate_gyro_offset();
   void compute_angle_estimations();
+  euler_angles get_euler_angles(euler_angles *angles) const;
+  acc_t_gyro_union get_acc_t_gyro_data(acc_t_gyro_union *acc_t_gyro_data) const;
 };
 
 #endif

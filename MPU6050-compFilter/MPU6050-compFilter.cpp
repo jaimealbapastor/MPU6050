@@ -1,9 +1,8 @@
 #include "MPU6050-compFilter.h"
 #include <Arduino.h>
 
-void MPU6050_compFilter::set_last_angles(unsigned long time, double roll_x, double pitch_y, double yaw_z)
+void MPU6050_compFilter::set_last_angles(double roll_x, double pitch_y, double yaw_z)
 {
-  this->last_angles.read_time = time;
   this->last_angles.roll = roll_x;
   this->last_angles.pitch = pitch_y;
   this->last_angles.yaw = yaw_z;
@@ -79,9 +78,18 @@ void MPU6050_compFilter::calibrate_gyro_offset()
   this->gyro_offset.yaw = z_gyro;
 }
 
-void MPU6050_compFilter::compute_acc_angles(euler_angles *angles, (uint8_t *)acc_t_gyro_data)
+inline void MPU6050_compFilter::set_g(acc_t_gyro_union *data)
 {
-  angles->pitch = asin(acc_x / g) * RADIANS_TO_DEGREES;
+  this->g_ = sqrt(square(data->value.x_acc) + square(data->value.y_acc) + square(data->value.z_acc));
+}
+
+void MPU6050_compFilter::compute_acc_angles(euler_angles *angles, acc_t_gyro_union *acc_t_gyro_data)
+{
+  double acc_x = acc_t_gyro_data->value.x_acc;
+  double acc_y = acc_t_gyro_data->value.y_acc;
+  double acc_z = acc_t_gyro_data->value.z_acc;
+
+  angles->pitch = asin(acc_x / this->g()) * RADIANS_TO_DEGREES;
   angles->roll = atan(acc_y / acc_z) * RADIANS_TO_DEGREES;
   angles->yaw = 0;
 }
@@ -92,12 +100,13 @@ void MPU6050_compFilter::compute_angle_estimations()
 {
   acc_t_gyro_union acc_t_gyro;
   this->read_acc_gyro_vals((uint8_t *)&acc_t_gyro);
+  this->set_g(&acc_t_gyro);
 
   unsigned long t_now = millis();
 
   // Accelerometer data
   euler_angles acc_angles;
-  this->compute_acc_angles(&acc_angles);
+  this->compute_acc_angles(&acc_angles, &acc_t_gyro);
 
   // Gyrometer Data
   // Convert gyro values to degrees/sec
@@ -106,20 +115,37 @@ void MPU6050_compFilter::compute_angle_estimations()
   double gyro_y = (acc_t_gyro.value.y_gyro - this->gyro_offset.pitch) / FS_SEL;
   double gyro_z = (acc_t_gyro.value.z_gyro - this->gyro_offset.yaw) / FS_SEL;
 
+  // Serial.print(F("Offset x: "));
+  // Serial.print(this->gyro_offset.roll);
+  // Serial.print(F("\ty: "));
+  // Serial.print(this->gyro_offset.pitch);
+  // Serial.print(F("\tz: "));
+  // Serial.println(this->gyro_offset.yaw);
+
   // Compute the (filtered) gyro angles
-  double dt = (t_now - get_last_read_time()) / 1000.0;
-  double gyro_angle_x = gyro_x * dt + this->get_last_roll();
-  double gyro_angle_y = gyro_y * dt + this->get_last_pitch();
-  double gyro_angle_z = gyro_z * dt + this->get_last_yaw();
+  double dt = (t_now - this->get_last_read_time()) / 1000.0;
+  double gyro_angle_x = gyro_x *dt+ this->get_last_roll();
+  double gyro_angle_y = gyro_y *dt+ this->get_last_pitch();
+  double gyro_angle_z = gyro_z *dt+ this->get_last_yaw();
 
   // Apply the complementary filter to figure out the change in angle - choice of alpha is
   // estimated now.  Alpha depends on the sampling rate...
-  double alpha = 0.986; // because my sampling rate is 0.014 s long
+  double alpha = 0; 
+
   double angle_x = alpha * gyro_angle_x + (1.0 - alpha) * acc_angles.roll;
   double angle_y = alpha * gyro_angle_y + (1.0 - alpha) * acc_angles.pitch;
-  double angle_z = gyro_angle_z; // Accelerometer doesn't give z-angle
+  double angle_z = (1.0 - alpha )*gyro_angle_z; // Accelerometer doesn't give z-angle
 
-  this->set_last_angles(t_now, angle_x, angle_y, angle_z);
+  this->set_last_angles(angle_x, angle_y, angle_z);
+}
+
+euler_angles MPU6050_compFilter::get_euler_angles(euler_angles *angles) const
+{
+  *angles = this->last_angles;
+}
+acc_t_gyro_union MPU6050_compFilter::get_acc_t_gyro_data(acc_t_gyro_union *acc_t_gyro_data) const
+{
+  this->read_acc_gyro_vals((uint8_t *)&acc_t_gyro_data);
 }
 
 //------------------------------------------------------------------
@@ -172,7 +198,7 @@ int MPU6050_compFilter::read(int start, uint8_t *buffer, int size)
   if (i != size)
     return (-11);
 
-  this->last_read_time = millis();
+  this->set_last_read_time(millis());
   return (0); // return : no error
 }
 
@@ -218,7 +244,6 @@ int MPU6050_compFilter::write(int start, const uint8_t *pData, int size)
   if (error != 0)
     return (error);
 
-  this->last_read_time = millis();
   return (0); // return : no error
 }
 
@@ -241,16 +266,16 @@ int MPU6050_compFilter::write_reg(int reg, uint8_t data)
 
 bool MPU6050_compFilter::is_ready()
 {
-  return millis() - this->get_last_time() > this->rest_time;
+  return millis() - this->get_last_read_time() > this->rest_time;
 }
 
 void MPU6050_compFilter::begin()
 {
   Wire.begin();
   // Reset the sensor
-  this->write_reg(MPU6050_PWR_MGMT_1, (uint8_t)0);
-  // Wire.beginTransmission(MPU6050_I2C_ADDRESS);
-  // Wire.write(MPU6050_PWR_MGMT_1);
-  // Wire.write(0);
-  // Wire.endTransmission(true);
+  // this->write_reg(MPU6050_PWR_MGMT_1, 0);
+  Wire.beginTransmission(MPU6050_I2C_ADDRESS);
+  Wire.write(MPU6050_PWR_MGMT_1);
+  Wire.write(0);
+  Wire.endTransmission(true);
 }

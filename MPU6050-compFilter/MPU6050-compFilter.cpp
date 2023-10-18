@@ -114,13 +114,6 @@ void MPU6050_compFilter::compute_angle_estimations()
   double gyro_y = (acc_t_gyro.value.y_gyro - this->gyro_offset.pitch);
   double gyro_z = (acc_t_gyro.value.z_gyro - this->gyro_offset.yaw);
 
-  // Serial.print(F("Offset x: "));
-  // Serial.print(this->gyro_offset.roll);
-  // Serial.print(F("\ty: "));
-  // Serial.print(this->gyro_offset.pitch);
-  // Serial.print(F("\tz: "));
-  // Serial.println(this->gyro_offset.yaw);
-
   // Compute the (filtered) gyro angles
   double dt = (t_now - this->get_last_read_time()) / 1000.0;
   double gyro_angle_x = gyro_x * dt + this->get_last_roll();
@@ -167,38 +160,28 @@ acc_t_gyro_union MPU6050_compFilter::get_acc_t_gyro_data(acc_t_gyro_union *acc_t
 int MPU6050_compFilter::read(int start, uint8_t *buffer, int size)
 {
   if (!this->is_ready())
-    return (1);
+    return 1;
 
-  int i, n, error;
+  int i;
 
   Wire.beginTransmission(MPU6050_I2C_ADDRESS);
-
-  n = Wire.write(start);
-  if (n != 1)
-    return (-10);
-
-  n = Wire.endTransmission(false); // hold the I2C-bus
-  if (n != 0)
-    return (n);
+  Wire.write(start);
+  Wire.endTransmission(false); // hold the I2C-bus
 
   // Third parameter is true: relase I2C-bus after data is read.
   Wire.requestFrom(MPU6050_I2C_ADDRESS, size, true);
+
   i = 0;
-  // Serial.print(F("ad: 0x"));
-  // Serial.print(start, HEX);
   while (Wire.available() && i < size)
   {
-    // Serial.print(F("\t"));
     buffer[i++] = Wire.read();
-    // Serial.print(Wire.read());
-    // Serial.print(buffer[i++]);
   }
-  // Serial.println(F(""));
+
   if (i != size)
-    return (-11);
+    return 1;
 
   this->set_last_read_time(millis());
-  return (0); // return : no error
+  return 0; // return : no error
 }
 
 // --------------------------------------------------------

@@ -63,7 +63,7 @@ class PlotWidget(QWidget):
         self.axis_x = None
         self.axis_y = None
 
-        self.x_range = 10  # seconds
+        self.x_range = 100  # seconds
         self.x_range_start = None
         self.x_range_end = None
 
@@ -110,8 +110,10 @@ class PlotWidget(QWidget):
         y_max = self.y_max + 0.5
         self.axis_y.setRange(y_min, y_max)
 
-        if self.x_max >= self.x_range_end:
-            self.x_range_end += self.x_range
+        if self.x_max >= self.x_range_end - self.x_range * 0.1:
+            self.x_range_end += self.x_range * 0.2
+            if self.x_range_end - self.x_range_start > self.x_range:
+                self.x_range_start = self.x_range_end - self.x_range
             # self.x_range_start += self.x_range
 
             # Update the x-axis range

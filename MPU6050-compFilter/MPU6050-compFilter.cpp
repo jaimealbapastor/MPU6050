@@ -126,7 +126,7 @@ void MPU6050_compFilter::compute_angle_estimations()
 
   double angle_x = alpha * gyro_angle_x + (1.0 - alpha) * acc_angles.roll;
   double angle_y = alpha * gyro_angle_y + (1.0 - alpha) * acc_angles.pitch;
-  double angle_z = (1 + alpha) * gyro_angle_z; // Accelerometer doesn't give z-angle
+  double angle_z = gyro_angle_z; // Accelerometer doesn't give z-angle
 
   this->set_last_angles(angle_x, angle_y, angle_z);
 }
